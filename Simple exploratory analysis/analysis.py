@@ -2,6 +2,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import f_oneway
+from scipy.stats import chi2_contingency
+from scipy.stats import ttest_1samp
 
 # Now, let's import our database. It is in a .sav format, so we need to 
 dados = pd.read_spss('dados_lista1.sav')
@@ -75,3 +77,44 @@ anova_childs = f_oneway(dados['n_mero_d'][dados['origem'] == 'Interior'],
 age_marital = dados.groupby('estado_c')['idade'].describe()
 salary_marital = dados.groupby('estado_c')['sal_rio1'].describe()
 
+# Question 5 - Check the association between marital status and level of education. Is it possible to say that there is a significant association between marital status and level of education (α=5%)?
+# To test this association, let's to use a qui-square test. 
+
+# First, let's calculate the contingency table
+contingency_marital_edu = pd.crosstab(dados['estado_c'], dados['grau_de'])
+
+# Now let's to apply the test to our contingency table
+
+chi2, p_value, _, _ = chi2_contingency(contingency_marital_edu)
+
+# Let's see the contingency table
+contingency_marital_edu
+
+# Let's see the p value
+p_value
+
+# Based on the p-value we can see that there is not a relationship between marital status and level of education
+
+# Question 6 - According to IBGE data, the average age of the population of SP is 31 years old. Does the sample presented have a significant difference in mean age in relation to the population mean estimate?
+
+# To answear this question, let's use a one-sample t test
+
+age_one_sample_t_test = ttest_1samp(dados['idade'], 31)
+
+# By means of a one sample t test it is possible to see a significante difference (p = 0.003) between the age of our sample and the population mean, with a mean difference of 3.58 years.
+
+# Question 7 - The salary of this sample was measured in three consecutive years (06,07 and 08). Was there a difference between the salary over time? (α=5%).
+
+# First, let's have a look into the distribution of our data in the 3 different times
+
+
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 5))
+ax1.hist(dados['sal_rio'])
+ax1.set_ylabel('Salary (first measure)')
+ax2.hist(dados['sal_rio1'])
+ax2.set_ylabel('Salary (second measure)')
+ax3.hist(dados['sal_rio2'])
+ax3.set_ylabel('Salary (third measure)')
+plt.show()
+
+# We can see that our measures aren't symetric, but we will use a repeated measures anova
