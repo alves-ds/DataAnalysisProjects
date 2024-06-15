@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import f_oneway
 from scipy.stats import chi2_contingency
 from scipy.stats import ttest_1samp
+from statsmodels.stats.anova import AnovaRM 
 
 # Now, let's import our database. It is in a .sav format, so we need to 
 dados = pd.read_spss('dados_lista1.sav')
@@ -118,3 +119,40 @@ ax3.set_ylabel('Salary (third measure)')
 plt.show()
 
 # We can see that our measures aren't symetric, but we will use a repeated measures anova
+# First, we need to convert our data from the wide to the long format. So, let's do it:
+dados = dados.reset_index()
+dados_long = pd.melt(dados, id_vars='index', value_vars=['sal_rio', 'sal_rio1', 'sal_rio2'])
+
+
+# We need to create a variable to indicate the repeated measures:
+
+# First, let's create this variable into our dataframe
+dados_long['medida'] = None
+
+# Now let's use for to put values into this new variable
+
+for index,row in dados_long.iterrows():
+    if row['variable'] == 'sal_rio':
+        dados_long.at[index, 'medida'] = 1
+    elif row['variable'] == 'sal_rio1':
+        dados_long.at[index, 'medida'] = 2
+    elif row['variable'] == 'sal_rio2':
+        dados_long.at[index, 'medida'] = 3
+
+# Now, let's fit the repeated measures ANOVA:
+RM_anova = AnovaRM(dados_long, depvar='value', subject='index', within=['medida']).fit()
+
+# Now let's see the result from our repeated measures ANOVA
+RM_anova.anova_table
+
+# Based in the ANOVA we cannot see any effect of time upon salary
+
+# Question 8 - Pay attention to the variable “Number of children”. Calculate the z-score for each participant in the sample. Which participants can be considered outliers for the number of children sample?
+# We already have the z-score in our database, so, let's check if there are some individual considered as outlier
+
+for index, row in dados.iterrows():
+    if row['Zn_mero_d'] > 3 or row['Zn_mero_d'] < -3:
+        print(row['index'])
+        
+# Based in this approach we can see that the individual 30 can be considered as an outlier.
+   
