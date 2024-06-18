@@ -1,0 +1,74 @@
+---
+title: "Case study - Exploratory data analysis"
+author: "Douglas Silva Alves"
+date: "2024-06-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About this document
+
+Welcome! This document represents one of my projects as a beginner data scientist. In this project, I take on the role of a junior data analyst tasked with a project for a fictitious company. 
+
+# Project Overview
+**Business task:**  Analyzing data from a company to identify distribution differences in socioeconomic variables, as well as whether the workers' salaries are influenced by these variables.
+
+## Key Questions:
+The key questions will be highlighted throughout the document.
+
+# Data for this project
+The data for this project is not publicly available.
+
+# Loading packages
+First, let's load the packages we will need for the data analysis.
+
+``` {python}
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.stats import f_oneway
+from scipy.stats import chi2_contingency
+from scipy.stats import ttest_1samp
+from statsmodels.stats.anova import AnovaRM
+```
+
+# Loading dataset
+``` {python}
+dados = pd.read_spss('dados_lista1.sav')
+``` 
+
+## Let's have a look in our data
+``` {python}
+dados.head()
+``` 
+
+We have a database with 36 workers in a company. Let's conduct an exploratory analysis based on pre-established questions.
+
+## Question 1 - Plot frequency tables for data relating to level of education, marital status and region of origin
+
+For this, let's use the 'crosstab' method from pandas
+
+``` {python}
+frequency_table = pd.crosstab(dados['grau_de'], 'count')
+``` 
+
+Let's compute a variable to see the relative proportions
+
+``` {python}
+frequency_table['percentage'] = frequency_table/len(dados)
+``` 
+
+To improve the interpretation, let's multiply the relative proportion by 100
+``` {python}
+frequency_table['percentage'] = frequency_table['percentage']*100
+``` 
+
+Let's have a look at our frequency table
+``` {python}
+frequency_table
+``` 
+
+We can see that the greater proportion of individuals from this company have a second degree qualification.
+
