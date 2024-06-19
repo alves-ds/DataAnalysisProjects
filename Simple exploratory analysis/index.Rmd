@@ -2,7 +2,17 @@
 title: "Case study - Exploratory data analysis"
 author: "Douglas Silva Alves"
 date: "2024-06-18"
-output: html_document
+output: 
+  html_document:
+    theme: united
+    highlight: tango
+    toc: true
+    toc_depth: 1
+    toc_float:
+      collapsed: false
+      smooth_croll: false
+    
+
 ---
 
 ```{r setup, include=FALSE}
@@ -71,4 +81,198 @@ frequency_table
 ``` 
 
 We can see that the greater proportion of individuals from this company have a second degree qualification.
+
+Now, let's do the same for the other categorical variables
+
+``` {python}
+frequency_marital = pd.crosstab(dados['estado_c'], 'count')
+
+frequency_marital['percentage'] = frequency_marital/len(dados)*100
+
+frequency_marital
+
+frequency_origin_region = pd.crosstab(dados['origem'], 'count')
+
+frequency_origin_region['percentage'] = frequency_origin_region/len(dados)*100
+
+frequency_origin_region
+``` 
+
+## Question 2 - Graph the above tables
+Let's do it using subplots. 
+
+``` {python}
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(9, 6), sharey=True)
+ax1.bar(frequency_table.index, frequency_table['percentage'])
+ax1.set_ylabel('Proportion of total sample')
+ax2.bar(frequency_origin_region.index, frequency_origin_region['percentage'])
+ax3.bar(frequency_marital.index, frequency_marital['percentage'])
+plt.show()
+```
+
+## Question 3 - Compare, statistically (α=5%), whether there are differences in the distribution of the number of children and the average age depending on the regions of origin of the workers
+
+First, as a prerequisite for using tests based on the arithmetic mean (such as ANOVA or t-test), let's examine the distribution of our dependent variables (age and number of children) using histograms.
+
+``` {python}
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 4))
+ax1.hist(dados['idade'])
+ax1.set_ylabel('Idade (anos)')
+ax2.hist(dados['n_mero_d'])
+ax2.set_ylabel('Número de filhos')
+plt.show()
+```
+
+We can note an asymmetric distribution for both variables, but let's compare these variables using analysis of variance.
+
+
+``` {python}
+anova_age = f_oneway(dados['idade'][dados['origem'] == 'Interior'],
+                     dados['idade'][dados['origem'] == 'Capital'],
+                     dados['idade'][dados['origem'] == 'Outro'])
+
+anova_childs = f_oneway(dados['n_mero_d'][dados['origem'] == 'Interior'],
+                     dados['n_mero_d'][dados['origem'] == 'Capital'],
+                     dados['n_mero_d'][dados['origem'] == 'Outro'])
+
+anova_age
+anova_childs
+
+``` 
+
+For both tests it was not possible to see any effect of origin!
+
+## Question 4 - Calculate the average salary and average age of single and married people
+
+``` {python}
+age_marital = dados.groupby('estado_c')['idade'].describe()
+salary_marital = dados.groupby('estado_c')['sal_rio1'].describe()
+
+age_marital
+salary_marital
+``` 
+
+
+## Question 5 - Check the association between marital status and level of education. Is it possible to say that there is a significant association between marital status and level of education (α=5%)?
+
+To test this association, let's use a chi-square test.
+
+First, let's calculate the contingency table
+
+``` {python}
+contingency_marital_edu = pd.crosstab(dados['estado_c'], dados['grau_de'])
+``` 
+
+Now let's to apply the test to our contingency table
+
+``` {python}
+chi2, p_value, _, _ = chi2_contingency(contingency_marital_edu)
+``` 
+
+
+Let's see the contingency table
+
+``` {python}
+contingency_marital_edu
+``` 
+
+Let's see the p value of our chi-square test
+
+``` {python}
+p_value
+``` 
+
+Based on the p-value we can see that there is not a relationship between marital status and level of education. 
+
+## Question 6 - According to IBGE data, the average age of the population of SP is 31 years old. Does the sample presented have a significant difference in mean age in relation to the population mean estimate?
+
+
+To answer this question, let's use a one-sample t test
+
+``` {python}
+age_one_sample_t_test = ttest_1samp(dados['idade'], 31)
+age_one_sample_t_test
+``` 
+
+By means of a one-sample t-test, it is possible to see a significant difference (p = 0.003) between the age of our sample and the population mean, with a mean difference of 3.58 years.
+
+
+## Question 7 - The salary of this sample was measured in three consecutive years (06,07 and 08). Was there a difference between the salary over time? (α=5%).
+
+First, let's have a look into the distribution of our data in the 3 different times
+
+``` {python}
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 5))
+ax1.hist(dados['sal_rio'])
+ax1.set_ylabel('Salary (first measure)')
+ax2.hist(dados['sal_rio1'])
+ax2.set_ylabel('Salary (second measure)')
+ax3.hist(dados['sal_rio2'])
+ax3.set_ylabel('Salary (third measure)')
+plt.show()
+``` 
+
+We can see that our measures aren't symmetric, but we will use a repeated measures ANOVA to compare the means of the three different measures.
+
+First, we need to convert our data from the wide to the long format. So, let's do it:
+
+``` {python}
+dados = dados.reset_index()
+dados_long = pd.melt(dados, id_vars='index', value_vars=['sal_rio', 'sal_rio1', 'sal_rio2'])
+``` 
+
+Now, We need to create a variable to indicate the repeated measures.
+
+First, let's create this variable into our dataframe
+``` {python}
+dados_long['measure'] = None
+``` 
+
+Now let's use a for loop to put values into this new variable
+
+``` {python}
+for index,row in dados_long.iterrows():
+    if row['variable'] == 'sal_rio':
+        dados_long.at[index, 'measure'] = 1
+    elif row['variable'] == 'sal_rio1':
+        dados_long.at[index, 'measure'] = 2
+    elif row['variable'] == 'sal_rio2':
+        dados_long.at[index, 'measure'] = 3
+```
+
+Let's see the result of this process
+``` {python}
+dados_long.head()
+```
+
+Now, let's fit the repeated measures ANOVA:
+
+``` {python}
+RM_anova = AnovaRM(dados_long, depvar='value', subject='index', within=['measure']).fit()
+``` 
+
+Now let's see the result from our repeated measures ANOVA
+``` {python}
+RM_anova.anova_table
+``` 
+
+Based in the ANOVA we cannot see any effect of time upon salary. 
+
+## Question 8 - Pay attention to the variable “Number of children”. Calculate the z-score for each participant in the sample. Which participants can be considered outliers for the number of children sample?
+
+We already have the z-score in our database, so, let's check if there are some individual considered as outlier using a for loop. 
+
+``` {python}
+for index, row in dados.iterrows():
+    if row['Zn_mero_d'] > 3 or row['Zn_mero_d'] < -3:
+        print(row['index'])
+```
+
+Based in this approach we can see that the individual 30 can be considered as an outlier.
+
+# Summary of results
+
+``` {r echo=FALSE, out.width="60%"}
+knitr::include_graphics("summary_image.jpg")
+```
 
